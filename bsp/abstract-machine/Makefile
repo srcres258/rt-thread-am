@@ -1,4 +1,9 @@
 ARCH ?= native
+
+ifneq ($(findstring $(ARCH),riscv32e-ysyxsoc),)
+  USE_PSRAM := 1
+endif
+
 AM_APPS_MK = build/${ARCH}/am-apps.mk
 FILE_MK = files.mk
 FILE_TMP = .tmp.$(FILE_MK)
@@ -8,26 +13,34 @@ NAME = rtthread
 SRCS = $(shell find src -name "*.c")
 CFLAGS += -DHAVE_CCONFIG_H -D__RTTHREAD__
 CFLAGS += -Wno-nonnull-compare
-LDFLAGS += -T extra.ld
 -include $(FILE_MK)
 -include $(AM_APPS_MK)
+
 include $(AM_HOME)/Makefile
+
+ifeq ($(USE_PSRAM),1)
+  LDSCRIPTS := $(abspath ./linker-psram-rtthread.ld)
+endif
+
+ifneq ($(USE_PSRAM),1)
+  LDFLAGS += -T extra.ld
+endif
 
 $(RTCONFIG_H):
 	touch $@
-	scons --useconfig=.config
+	ARCH=$(ARCH) scons --useconfig=.config
 	if [ "`sed -n '3p' $@`"x = x ]; then sed -i -e '2a#include "extra.h"' $@; fi
 
 init: $(RTCONFIG_H)
-	scons -c
-	scons --verbose -n > $(FILE_TMP)
+	ARCH=$(ARCH) scons -c
+	ARCH=$(ARCH) scons --verbose -n > $(FILE_TMP)
 	cat $(FILE_TMP) | grep -o '[^ ]*.c$$' | awk '{print "SRCS += " $$1}' > $(FILE_MK)
 	cat $(FILE_TMP) | grep 'gcc ' | head -n 1 | grep -o " -I[^ ]*" | awk '{print "CFLAGS += " $$1}' >> $(FILE_MK)
 	rm $(FILE_TMP)
 
 menuconfig:
-	scons --menuconfig
-	scons --genconfig
+	ARCH=$(ARCH) scons --menuconfig
+	ARCH=$(ARCH) scons --genconfig
 	$(MAKE) init
 
 ifneq ($(MAKECMDGOALS),clean)

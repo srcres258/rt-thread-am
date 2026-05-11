@@ -21,8 +21,20 @@ env['ASCOM'] = env['ASPPCOM']
 
 Export('RTT_ROOT')
 Export('rtconfig')
-rtconfig.CPU='virt64'
-rtconfig.ARCH='risc-v'
+
+_am_arch = os.environ.get('ARCH', '')
+if _am_arch.startswith('riscv32e'):
+    rtconfig.CPU = 'rv32e'
+    rtconfig.ARCH = 'risc-v'
+elif _am_arch.startswith('riscv32'):
+    rtconfig.CPU = 'rv32'
+    rtconfig.ARCH = 'risc-v'
+elif _am_arch.startswith('riscv64'):
+    rtconfig.CPU = 'virt64'
+    rtconfig.ARCH = 'risc-v'
+else:
+    rtconfig.CPU = 'virt64'
+    rtconfig.ARCH = 'risc-v'
 
 # prepare building environment
 objs = PrepareBuilding(env, RTT_ROOT, has_libcpu = True)
