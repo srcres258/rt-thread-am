@@ -1,7 +1,9 @@
 ARCH ?= native
 
 ifneq ($(findstring $(ARCH),riscv32e-ysyxsoc),)
-  USE_PSRAM := 1
+  ifneq ($(USE_SDRAM),1)
+    USE_PSRAM := 1
+  endif
 endif
 
 AM_APPS_MK = build/${ARCH}/am-apps.mk
@@ -18,11 +20,13 @@ CFLAGS += -Wno-nonnull-compare
 
 include $(AM_HOME)/Makefile
 
-ifeq ($(USE_PSRAM),1)
+ifeq ($(USE_SDRAM),1)
+  LDSCRIPTS := $(abspath ./linker-sdram-rtthread.ld)
+else ifeq ($(USE_PSRAM),1)
   LDSCRIPTS := $(abspath ./linker-psram-rtthread.ld)
 endif
 
-ifneq ($(USE_PSRAM),1)
+ifneq ($(or $(USE_SDRAM),$(USE_PSRAM)),1)
   LDFLAGS += -T extra.ld
 endif
 
