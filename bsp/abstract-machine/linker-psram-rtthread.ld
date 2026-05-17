@@ -14,14 +14,26 @@ SECTIONS {
     } > flash : boot
 
     .rodata : {
-        *(.rodata*)
+        *(EXCLUDE_FILE(*ssbl.o) .rodata*)
     } > flash : rodata
+
+    . = ORIGIN(sram);
+
+    .ssbl : {
+        _ssbl_start = .;
+        *ssbl.o(.text .text.* .rodata .rodata.* .data .data.* .sdata .sdata.*)
+        *ssbl.o(.bss .bss.* .sbss .sbss.* .scommon)
+        . = ALIGN(4);
+        _ssbl_end = .;
+    } > sram AT> flash : ssbl
+
+    _ssbl_lma = LOADADDR(.ssbl);
 
     . = ORIGIN(psram);
 
     .text : {
         _text_start = .;
-        *(.text*)
+        *(EXCLUDE_FILE(*ssbl.o) .text*)
         _text_end = .;
     } > psram AT> flash : text
 
@@ -57,8 +69,8 @@ SECTIONS {
 
     .data : {
         _data_start = .;
-        *(.data*)
-        *(.sdata*)
+        *(EXCLUDE_FILE(*ssbl.o) .data*)
+        *(EXCLUDE_FILE(*ssbl.o) .sdata*)
         _data_end = .;
     } > psram AT> flash : data
 
@@ -76,9 +88,9 @@ SECTIONS {
 
     .bss (NOLOAD) : {
         _bss_start = .;
-        *(.bss*)
-        *(.sbss*)
-        *(.scommon)
+        *(EXCLUDE_FILE(*ssbl.o) .bss*)
+        *(EXCLUDE_FILE(*ssbl.o) .sbss*)
+        *(EXCLUDE_FILE(*ssbl.o) .scommon)
         _bss_end = .;
     } > psram
 
@@ -94,6 +106,7 @@ SECTIONS {
 PHDRS {
     boot   PT_LOAD;
     rodata PT_LOAD;
+    ssbl   PT_LOAD;
     text   PT_LOAD;
     data   PT_LOAD;
 }

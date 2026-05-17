@@ -38,7 +38,16 @@ static int _uart_putc(struct rt_serial_device *serial, char c) {
 
 static int _uart_getc(struct rt_serial_device *serial) {
   static const char *p = "help\ndate\nversion\nfree\nps\npwd\nls\nmemtrace\nmemcheck\nutest_list\n";
-  return (*p != '\0' ? *(p ++) : -1);
+  if (*p != '\0') {
+    return *(p++);
+  }
+  // 内建字符串读完后，通过 IOE 从 UART RX 轮询读取字符
+  AM_UART_RX_T rx;
+  ioe_read(AM_UART_RX, &rx);
+  if (rx.data != (char)-1) {
+    return (unsigned char)rx.data;
+  }
+  return -1;
 }
 
 const struct rt_uart_ops _uart_ops = {
