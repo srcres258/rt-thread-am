@@ -82,4 +82,5 @@ SECTIONS {
   end = .;
   _end = .;
   _heap_start = ALIGN(0x1000);
+  _heap_end = _pmem_start + 0x2000000;  /* 32MB = default NEMU CONFIG_MSIZE */
 }

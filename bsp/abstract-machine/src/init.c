@@ -15,8 +15,14 @@ void rt_hw_board_init() {
   rt_hw_uart_init();
 
 #ifdef RT_USING_HEAP
-  /* initialize memory system */
-  rt_system_heap_init(RT_HW_HEAP_BEGIN, RT_HW_HEAP_END);
+  {
+    extern char _heap_end;
+    void *safe_heap_end = heap.end;
+    if ((uintptr_t)safe_heap_end > (uintptr_t)&_heap_end) {
+      safe_heap_end = &_heap_end;
+    }
+    rt_system_heap_init(heap.start, safe_heap_end);
+  }
 #endif
 
   uint32_t size = AM_APPS_HEAP_SIZE;
