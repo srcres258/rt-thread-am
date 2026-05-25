@@ -1,6 +1,6 @@
 ARCH ?= native
 
-ifneq ($(findstring $(ARCH),riscv32e-ysyxsoc),)
+ifneq ($(filter $(PLATFORM),ysyxsoc),)
   ifneq ($(USE_SDRAM),1)
     USE_PSRAM := 1
   endif
@@ -24,10 +24,17 @@ ifeq ($(USE_SDRAM),1)
   LDSCRIPTS := $(abspath ./linker-sdram-rtthread.ld)
 else ifeq ($(USE_PSRAM),1)
   LDSCRIPTS := $(abspath ./linker-psram-rtthread.ld)
+else ifneq ($(filter $(PLATFORM),nemu npc),)
+  LDSCRIPTS := $(abspath ./linker-nemu-rtthread.ld)
 endif
 
+# Fallback: INSERT-based extra.ld, only for platforms without a dedicated script
 ifneq ($(or $(USE_SDRAM),$(USE_PSRAM)),1)
-  LDFLAGS += -T extra.ld
+  ifeq ($(filter $(PLATFORM),nemu npc),)
+    # TODO: native platform needs a dedicated linker script (currently falls
+    # back to INSERT-based extra.ld which is fragile with --gc-sections)
+    LDFLAGS += -T extra.ld
+  endif
 endif
 
 $(RTCONFIG_H):
