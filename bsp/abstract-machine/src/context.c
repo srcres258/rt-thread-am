@@ -2,7 +2,7 @@
 #include <klib.h>
 #include <rtthread.h>
 
-#define STACK_SIZE (4096 * 8)
+#define STACK_SIZE (4096 * 2)
 typedef union {
   uint8_t stack[STACK_SIZE];
   struct { Context *cp; };
@@ -22,24 +22,28 @@ struct context_switch_info {
   rt_ubase_t to;
 };
 
+static struct context_switch_info switch_info;
+static struct context_switch_info *pending_switch = NULL;
+
+
 static Context* ev_handler(Event e, Context *c) {
   rt_thread_t cur_thread = rt_thread_self();
-  struct context_switch_info *info = (struct context_switch_info *) cur_thread->user_data;
+  struct context_switch_info *info = pending_switch;
   switch (e.event) {
     case EVENT_YIELD:
       if (info == NULL) {
-        Context *self_ctx = *((Context **) &cur_thread->sp);
-        memcpy(self_ctx, c, sizeof(Context));
+        cur_thread->sp = (void *)c;
         break;
       }
       if (info->from) {
-        Context *from_ctx = *((Context **) info->from);
-        memcpy(from_ctx, c, sizeof(Context));
+        *(Context **)info->from = c;
       }
       if (info->to) {
-        Context *to_ctx = *((Context **) info->to);
-        memcpy(c, to_ctx, sizeof(Context));
+        Context *to_ctx = *(Context **)info->to;
+        pending_switch = NULL;
+        return to_ctx;
       }
+      pending_switch = NULL;
       break;
     default: printf("Unhandled event ID = %d\n", e.event); assert(0);
   }
@@ -51,33 +55,21 @@ void __am_cte_init() {
 }
 
 void rt_hw_context_switch_to(rt_ubase_t to) {
-  struct context_switch_info info = {
-    .from = (rt_ubase_t) NULL,
-    .to = (rt_ubase_t) to
-  };
-
-  rt_thread_t cur_thread = rt_thread_self();
-  rt_ubase_t old_user_data = cur_thread->user_data;
-  cur_thread->user_data = (rt_ubase_t) &info;
+  switch_info.from = (rt_ubase_t) NULL;
+  switch_info.to = (rt_ubase_t) to;
+  pending_switch = &switch_info;
 
   yield();
-
-  cur_thread->user_data = old_user_data;
+  pending_switch = NULL;
 }
 
 void rt_hw_context_switch(rt_ubase_t from, rt_ubase_t to) {
-  struct context_switch_info info = {
-    .from = (rt_ubase_t) from,
-    .to = (rt_ubase_t) to
-  };
-
-  rt_thread_t cur_thread = rt_thread_self();
-  rt_ubase_t old_user_data = cur_thread->user_data;
-  cur_thread->user_data = (rt_ubase_t) &info;
+  switch_info.from = (rt_ubase_t) from;
+  switch_info.to = (rt_ubase_t) to;
+  pending_switch = &switch_info;
 
   yield();
-
-  cur_thread->user_data = old_user_data;
+  pending_switch = NULL;
 }
 
 void rt_hw_context_switch_interrupt(void *context, rt_ubase_t from, rt_ubase_t to, struct rt_thread *to_thread) {
