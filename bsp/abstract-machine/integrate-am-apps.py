@@ -93,10 +93,12 @@ static void am_app_start_thread(void *args) {
 static void am_app_start_wrapper(const char *app_name, void *app_main, int argc, char *argv[]) {
   memcpy(am_apps_data.start, am_apps_data_content, am_apps_data.end - am_apps_data.start);
   memset(am_apps_bss.start, 0, am_apps_bss.end - am_apps_bss.start);
+  Area __saved_heap = heap;
   heap = am_apps_heap;
   void *args[2] = { app_main, (argc >= 2 ? argv[1] : "") };
   rt_thread_t tid = rt_thread_create(app_name, am_app_start_thread, args, 0x4000, 0, 20);
   rt_thread_startup(tid);
+  heap = __saved_heap;
 }
 bool __dummy_ioe_init() { return true; }
 bool __dummy_cte_init(Context *(*handler)(Event ev, Context *ctx)) { return true; }

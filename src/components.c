@@ -184,6 +184,7 @@ void main_thread_entry(void *parameter)
 #ifdef RT_USING_COMPONENTS_INIT
     /* RT-Thread components initialization */
     rt_components_init();
+    rt_thread_yield();
 #endif /* RT_USING_COMPONENTS_INIT */
 
 #ifdef RT_USING_SMP

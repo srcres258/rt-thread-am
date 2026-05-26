@@ -27,6 +27,11 @@ static Context* ev_handler(Event e, Context *c) {
   struct context_switch_info *info = (struct context_switch_info *) cur_thread->user_data;
   switch (e.event) {
     case EVENT_YIELD:
+      if (info == NULL) {
+        Context *self_ctx = *((Context **) &cur_thread->sp);
+        memcpy(self_ctx, c, sizeof(Context));
+        break;
+      }
       if (info->from) {
         Context *from_ctx = *((Context **) info->from);
         memcpy(from_ctx, c, sizeof(Context));
@@ -67,8 +72,8 @@ void rt_hw_context_switch(rt_ubase_t from, rt_ubase_t to) {
   };
 
   rt_thread_t cur_thread = rt_thread_self();
-  cur_thread->user_data = (rt_ubase_t) &info;
   rt_ubase_t old_user_data = cur_thread->user_data;
+  cur_thread->user_data = (rt_ubase_t) &info;
 
   yield();
 
@@ -80,7 +85,6 @@ void rt_hw_context_switch_interrupt(void *context, rt_ubase_t from, rt_ubase_t t
 }
 
 static void tentry_wrapper(void *args) {
-  // 从 args 中读取 tentry, parameter, texit 参数.
   struct tentry_wrapper_args *twargs = (struct tentry_wrapper_args *) args;
   tentry_func_t tentry = (tentry_func_t) twargs->tentry;
   void *parameter = twargs->parameter;
