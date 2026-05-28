@@ -2,6 +2,12 @@
 #include <klib.h>
 #include <rtthread.h>
 
+// NOTE: STACK_SIZE defines the minimum stack size required by the context-switch
+// mechanism. Every thread that uses rt_hw_stack_init() (i.e., ALL RT-Thread threads
+// on this platform) MUST have a stack >= STACK_SIZE + sizeof(tentry_wrapper_args)
+// + sizeof(Context). If a thread's stack is smaller, the HardwarePCB will overflow
+// the allocated region and corrupt adjacent memory (typically the tentry_wrapper_args
+// struct at the stack top, causing tentry_wrapper to jump to a garbage address).
 #define STACK_SIZE (4096 * 2)
 typedef union {
   uint8_t stack[STACK_SIZE];
